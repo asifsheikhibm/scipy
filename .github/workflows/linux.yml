@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - maintenance/**
+      - ppc64le-test
   pull_request:
     branches:
       - main
@@ -635,4 +636,27 @@ jobs:
       - name: Test SciPy
         run: |
           export OMP_NUM_THREAD=2
+          pixi run test-fail-slow
+  
+  test_ppc64le:
+    name: ppc64le, fast, fail slow, py3.12/npAny, spin
+    needs: get_commit_message
+    if: >
+      needs.get_commit_message.outputs.message == 1
+      && (github.repository == 'scipy/scipy' || github.repository == '')
+    runs-on: ubuntu-24.04-ppc64le
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: prefix-dev/setup-pixi@ba3bb36eb2066252b2363392b7739741bb777659 # v0.8.1
+        with:
+          pixi-version: v0.71.0
+          cache: false
+
+      - name: Test SciPy
+        run: |
+          export OMP_NUM_THREADS=2
           pixi run test-fail-slow
