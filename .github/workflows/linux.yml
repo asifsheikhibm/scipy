@@ -660,7 +660,7 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install spin
-          python3 -m pip install --group build --group test-fail-slow --no-build-isolation
+          python3 -m pip install --group build --group test-fail-slow --no-build-isolation --extra-index-url https://wheels.developerfirst.ibm.com/ppc64le/linux
 
       - name: Build SciPy
         run: spin build --setup-args=-Dblas=openblas --setup-args=-Dlapack=openblas --setup-args=-Duse-g77-abi=true
