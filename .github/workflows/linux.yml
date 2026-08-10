@@ -643,20 +643,29 @@ jobs:
     needs: get_commit_message
     if: >
       needs.get_commit_message.outputs.message == 1
-      && (github.repository == 'scipy/scipy' || github.repository == '')
-    runs-on: ubuntu-24.04-ppc64le
+      && (github.repository == 'scipy/scipy' || github.repository == 'asifsheikhibm/scipy' ||github.repository == '')
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: recursive
           persist-credentials: false
 
-      - uses: prefix-dev/setup-pixi@ba3bb36eb2066252b2363392b7739741bb777659 # v0.8.1
-        with:
-          pixi-version: v0.71.0
-          cache: false
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python3-pip python3-dev libopenblas-dev pkg-config gfortran
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install spin
+          python3 -m pip install --group build --group test-fail-slow --no-build-isolation
+
+      - name: Build SciPy
+        run: spin build --setup-args=-Dblas=openblas --setup-args=-Dlapack=openblas --setup-args=-Duse-g77-abi=true
 
       - name: Test SciPy
         run: |
           export OMP_NUM_THREADS=2
-          pixi run test-fail-slow
+          spin test --no-build -m 'not slow' -- --durations=0 --durations-min=0.5 --fail-slow=1.0
