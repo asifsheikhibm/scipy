@@ -681,10 +681,10 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
-      - name: Setup Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: "3.12"
+      # - name: Setup Python
+      #   uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      #   with:
+      #     python-version: "3.12"
 
       - name: Install Ubuntu dependencies
         run: |
@@ -694,7 +694,7 @@ jobs:
 
       - name: Install Python packages
         run: |
-          python -m pip install --group build --group dev-cli --group test-core --group test-mp
+          python -m pip install --group build --group dev-cli --group test-core --group test-mp --extra-index-url https://wheels.developerfirst.ibm.com/ppc64le/linux
 
       - name: Set up ccache
         uses: ./.github/ccache
