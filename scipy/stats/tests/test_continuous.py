@@ -464,8 +464,8 @@ def check_dist_func(dist, fname, arg, result_shape, methods):
         tol_override = {'atol': 1e-6}
     elif fname in {'logcdf'}:  # gh-22276
     # ppc64le libm has ~1 extra ULP of error in erfc; 
-        rtol = 5e-6 if platform.machine() == 'ppc64le' else 2e-7
-        tol_override = {'rtol': rtol}
+        # rtol = 5e-6 if platform.machine() == 'ppc64le' else 2e-7
+        tol_override = {'rtol': 2e-7}
 
     if dist._overrides(f'_{fname}_formula'):
         methods.add('formula')
