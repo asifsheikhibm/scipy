@@ -699,7 +699,7 @@ jobs:
 
       - name: Setup build and install scipy
         run: |
-          CFLAGS="-ffp-contract=off" CXXFLAGS="-ffp-contract=off" spin build --release
+          CFLAGS="-O2" CXXFLAGS="-O2" spin build --release
 
       - name: Ccache performance
         shell: bash -l {0}
