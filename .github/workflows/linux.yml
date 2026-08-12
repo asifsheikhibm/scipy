@@ -692,9 +692,9 @@ jobs:
           python -m pip install --upgrade pip
           # trying few approaches
           # Install meson-python first — numpy's build backend requires it
-          python -m pip install "meson-python>=0.15.0"
-          # Install numpy from devpi
-          python -m pip install numpy --extra-index-url https://wheels.developerfirst.ibm.com/ppc64le/linux --prefer-binary
+          # python -m pip install "meson-python>=0.15.0"
+          # Install gmpy2 from devpi
+          python -m pip install gmpy2 --extra-index-url https://wheels.developerfirst.ibm.com/ppc64le/linux --prefer-binary
           # Install everything else from PyPi
           python -m pip install --group build --group dev-cli --group test-core --group test-mp
 
