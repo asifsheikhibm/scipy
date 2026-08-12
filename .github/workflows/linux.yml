@@ -689,6 +689,7 @@ jobs:
 
       - name: Install Python packages # trying without devpi index
         run: |
+          python -m pip install --upgrade pip
           python -m pip install --group build --group dev-cli --group test-core --group test-mp
 
       - name: Set up ccache
