@@ -692,11 +692,14 @@ jobs:
       
       - name: Point linker at wheel-provided OpenBLAS
         run: |
-          LIBDIR=$(python -c "import openblas; print(openblas.get_lib_dir())")
-          INCDIR=$(python -c "import openblas; print(openblas.get_include_dir())")
-          echo "LD_LIBRARY_PATH=${LIBDIR}:${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
-          echo "LIBRARY_PATH=${LIBDIR}:${LIBRARY_PATH}" >> "$GITHUB_ENV"
-          echo "CPATH=${INCDIR}:${CPATH}" >> "$GITHUB_ENV"
+          BASE=$(python -c "import openblas; print(list(openblas.__path__)[0])")
+          LIB=${BASE}/lib
+          INC=${BASE}/include
+          PC=${BASE}/lib/pkgconfig
+          echo "LD_LIBRARY_PATH=${LIB}:${LD_LIBRARY_PATH}" >> $GITHUB_ENV
+          echo "LIBRARY_PATH=${LIB}:${LIBRARY_PATH}"       >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=${PC}:${PKG_CONFIG_PATH}"  >> $GITHUB_ENV
+          echo "CPATH=${INC}:${CPATH}"                     >> $GITHUB_ENV
 
       - name: Install Python packages # trying with devpi index -> failing 4 test cases
         run: |
@@ -717,7 +720,7 @@ jobs:
 
       - name: Setup build and install scipy
         run: |
-          spin build --release --setup-args=-Duse-g77-abi=true
+          spin build --release --setup-args=-Dblas=openblas --setup-args=-Dlapack=openblas --setup-args=-Duse-g77-abi=true
 
       - name: Ccache performance
         shell: bash -l {0}
