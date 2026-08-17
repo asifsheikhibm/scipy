@@ -717,7 +717,7 @@ jobs:
           ## Install gmpy2 from devpi
           # python -m pip install gmpy2 --extra-index-url https://wheels.developerfirst.ibm.com/ppc64le/linux --prefer-binary
           # Install everything else from PyPi
-          python -m pip install --group build --group dev-cli --group test-core --group test-mp
+          python -m pip install --group build --group dev-cli --group test-core --group test-mp --extra-index-url https://wheels.developerfirst.ibm.com/ppc64le/linux --prefer-binary
 
       - name: Set up ccache
         uses: ./.github/ccache
