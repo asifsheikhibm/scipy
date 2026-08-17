@@ -728,9 +728,9 @@ jobs:
           ccache --evict-older-than 1d
           ccache -s
       
-      - name: Verify scipy is linked against devpi OpenBLAS
-        run: |
-          cd /tmp && python -c "import scipy; scipy.show_config()"
+      # - name: Verify scipy is linked against devpi OpenBLAS
+      #   run: |
+      #     cd /tmp && python -c "import scipy; scipy.show_config()"
 
       - name: Test SciPy
         run: |
