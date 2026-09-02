@@ -684,29 +684,28 @@ jobs:
       - name: Install Ubuntu dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libatlas-base-dev \
-            libgmp-dev libmpfr-dev libsuitesparse-dev libmpc-dev ccache
+          sudo apt-get install -y libopenblas-dev libatlas-base-dev liblapack-dev libgmp-dev libmpfr-dev libsuitesparse-dev ccache libmpc-dev
       
-      - name: Install OpenBLAS from devpi
-        run: python -m pip install "openblas==0.3.32+ppc64le1" --extra-index-url https://wheels.developerfirst.ibm.com/ppc64le/linux --prefer-binary
+      # - name: Install OpenBLAS from devpi
+        # run: python -m pip install "openblas==0.3.32+ppc64le1" --extra-index-url https://wheels.developerfirst.ibm.com/ppc64le/linux --prefer-binary
       
-      - name: Point linker at wheel-provided OpenBLAS
-        run: |
-          BASE=$(python -c "import openblas; print(list(openblas.__path__)[0])")
-          LIB=${BASE}/lib
-          INC=${BASE}/include
-          PC=${BASE}/lib/pkgconfig
+      # - name: Point linker at wheel-provided OpenBLAS
+      #   run: |
+      #     BASE=$(python -c "import openblas; print(list(openblas.__path__)[0])")
+      #     LIB=${BASE}/lib
+      #     INC=${BASE}/include
+      #     PC=${BASE}/lib/pkgconfig
 
-          # Persist to GITHUB_ENV for all subsequent CI steps
-          echo "LD_LIBRARY_PATH=${LIB}:${LD_LIBRARY_PATH}" >> $GITHUB_ENV
-          echo "LIBRARY_PATH=${LIB}:${LIBRARY_PATH}"       >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=${PC}:${PKG_CONFIG_PATH}"  >> $GITHUB_ENV
-          echo "CPATH=${INC}:${CPATH}"                     >> $GITHUB_ENV
+      #     # Persist to GITHUB_ENV for all subsequent CI steps
+      #     echo "LD_LIBRARY_PATH=${LIB}:${LD_LIBRARY_PATH}" >> $GITHUB_ENV
+      #     echo "LIBRARY_PATH=${LIB}:${LIBRARY_PATH}"       >> $GITHUB_ENV
+      #     echo "PKG_CONFIG_PATH=${PC}:${PKG_CONFIG_PATH}"  >> $GITHUB_ENV
+      #     echo "CPATH=${INC}:${CPATH}"                     >> $GITHUB_ENV
 
-          # Also register with ldconfig so the .so is found by any process
-          # on this runner without needing LD_LIBRARY_PATH at all
-          echo "${LIB}" | sudo tee /etc/ld.so.conf.d/openblas-devpi.conf
-          sudo ldconfig
+      #     # Also register with ldconfig so the .so is found by any process
+      #     # on this runner without needing LD_LIBRARY_PATH at all
+      #     echo "${LIB}" | sudo tee /etc/ld.so.conf.d/openblas-devpi.conf
+      #     sudo ldconfig
 
       - name: Install Python packages # trying with devpi index -> failing 4 test cases
         run: |
@@ -727,7 +726,7 @@ jobs:
 
       - name: Setup build and install scipy
         run: |
-          spin build --release --setup-args=-Dblas=openblas --setup-args=-Dlapack=openblas --setup-args=-Duse-g77-abi=true
+          spin build --release
 
       - name: Ccache performance
         shell: bash -l {0}
