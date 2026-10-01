@@ -36,36 +36,6 @@
             "cephes_bdtri_wrap": "dpd->d"
         }
     },
-    "elliprc": {
-	"ellint_carlson_wrap.hh++": {
-	    "fellint_RC": "dd->d",
-	    "cellint_RC": "DD->D"
-	}
-    },
-    "elliprd": {
-	"ellint_carlson_wrap.hh++": {
-	    "fellint_RD": "ddd->d",
-	    "cellint_RD": "DDD->D"
-	}
-    },
-    "elliprf": {
-	"ellint_carlson_wrap.hh++": {
-	    "fellint_RF": "ddd->d",
-	    "cellint_RF": "DDD->D"
-	}
-    },
-    "elliprg": {
-	"ellint_carlson_wrap.hh++": {
-	    "fellint_RG": "ddd->d",
-	    "cellint_RG": "DDD->D"
-	}
-    },
-    "elliprj": {
-	"ellint_carlson_wrap.hh++": {
-	    "fellint_RJ": "dddd->d",
-	    "cellint_RJ": "DDDD->D"
-	}
-    },
     "eval_chebyc": {
         "orthogonal_eval.pxd": {
             "eval_chebyc[double complex]": "dD->D",
@@ -179,14 +149,6 @@
         "_cdflib_wrappers.pxd": {
             "fdtridfd": "ddd->d"        }
     },
-    "hyp1f1": {
-        "boost_special_functions.h++": {
-            "hyp1f1_double": "ddd->d"
-	    },
-        "cython_special_wrappers.h": {
-            "chyp1f1_wrap": "ddD->D"
-        }
-    },
     "kn": {
         "_legacy.pxd": {
             "kn_unsafe": "dd->d"
@@ -286,11 +248,6 @@
         },
         "cython_special_wrappers.h": {
             "cephes_smirnovp_wrap": "pd->d"
-        }
-    },
-    "stdtridf": {
-        "_cdflib_wrappers.pxd": {
-            "stdtridf": "dd->d"
         }
     },
     "yn": {

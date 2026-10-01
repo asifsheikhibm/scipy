@@ -20,6 +20,7 @@
 #include <xsf/cephes/unity.h>
 #include <xsf/cosine.h>
 #include <xsf/convex_analysis.h>
+#include <xsf/cpu/ellint_carlson.h>
 #include <xsf/cpu/stats.h>
 #include <xsf/digamma.h>
 #include <xsf/digammainv.h>
@@ -40,6 +41,7 @@
 #include <xsf/log.h>
 #include <xsf/log_exp.h>
 #include <xsf/mathieu_legacy.h>
+#include <xsf/multivariate_normal.h>
 #include <xsf/ndtri_exp.h>
 #include <xsf/par_cyl.h>
 #include <xsf/specfun.h>
@@ -66,14 +68,13 @@
 // This allows the build process to generate a corresponding entry for scipy.special.cython_special.
 
 extern const char *_beta_pdf_doc;
-extern const char *_beta_ppf_doc;
 extern const char *_binom_cdf_doc;
 extern const char *_binom_isf_doc;
 extern const char *_binom_pmf_doc;
 extern const char *_binom_ppf_doc;
 extern const char *_binom_sf_doc;
+extern const char *_bivariate_normal_cdf_doc;
 extern const char *_cospi_doc;
-extern const char *_bivariate_normal_sf_doc;
 extern const char *_cauchy_isf_doc;
 extern const char *_cauchy_ppf_doc;
 extern const char *_cosine_cdf_doc;
@@ -180,6 +181,11 @@ extern const char *ellipj_doc;
 extern const char *ellipk_doc;
 extern const char *ellipkm1_doc;
 extern const char *ellipkinc_doc;
+extern const char *elliprc_doc;
+extern const char *elliprd_doc;
+extern const char *elliprf_doc;
+extern const char *elliprg_doc;
+extern const char *elliprj_doc;
 extern const char *erf_doc;
 extern const char *erfc_doc;
 extern const char *erfcinv_doc;
@@ -222,6 +228,7 @@ extern const char *hankel1e_doc;
 extern const char *hankel2_doc;
 extern const char *hankel2e_doc;
 extern const char *hyp0f1_doc;
+extern const char *hyp1f1_doc;
 extern const char *hyp2f1_doc;
 extern const char *hyperu_doc;
 extern const char *i0_doc;
@@ -233,6 +240,7 @@ extern const char *inv_boxcox1p_doc;
 extern const char *iv_doc;
 extern const char *iv_ratio_doc;
 extern const char *iv_ratio_c_doc;
+extern const char *iv_ratioinv_doc;
 extern const char *ive_doc;
 extern const char *j0_doc;
 extern const char *j1_doc;
@@ -324,6 +332,7 @@ extern const char *spherical_in_d_doc;
 extern const char *spherical_kn_doc;
 extern const char *spherical_kn_d_doc;
 extern const char *stdtr_doc;
+extern const char *stdtridf_doc;
 extern const char *stdtrit_doc;
 extern const char *struve_h_doc;
 extern const char *struve_l_doc;
@@ -369,12 +378,6 @@ _special_ufuncs_module_exec(PyObject *module)
                           "_beta_pdf", _beta_pdf_doc);
     PyModule_AddObjectRef(module, "_beta_pdf", _beta_pdf);
 
-    PyObject *_beta_ppf =
-        xsf::numpy::ufunc({static_cast<xsf::numpy::fff_f>(beta_ppf_float),
-                           static_cast<xsf::numpy::ddd_d>(beta_ppf_double)},
-                          "_beta_ppf", _beta_ppf_doc);
-    PyModule_AddObjectRef(module, "_beta_ppf", _beta_ppf);
-
     PyObject *_binom_cdf =
         xsf::numpy::ufunc({static_cast<xsf::numpy::fff_f>(binom_cdf_float),
                            static_cast<xsf::numpy::ddd_d>(binom_cdf_double)},
@@ -405,11 +408,11 @@ _special_ufuncs_module_exec(PyObject *module)
                           "_binom_sf", _binom_sf_doc);
     PyModule_AddObjectRef(module, "_binom_sf", _binom_sf);
 
-    PyObject *_bivariate_normal_sf = xsf::numpy::ufunc(
-        {static_cast<xsf::numpy::fff_f>(xsf::bivariate_normal_sf),
-         static_cast<xsf::numpy::ddd_d>(xsf::bivariate_normal_sf)},
-        "_bivariate_normal_sf", _bivariate_normal_sf_doc);
-    PyModule_AddObjectRef(module, "_bivariate_normal_sf", _bivariate_normal_sf);
+    PyObject *_bivariate_normal_cdf = xsf::numpy::ufunc(
+        {static_cast<xsf::numpy::fff_f>(xsf::bivariate_normal_cdf),
+         static_cast<xsf::numpy::ddd_d>(xsf::bivariate_normal_cdf)},
+        "_bivariate_normal_cdf", _bivariate_normal_cdf_doc);
+    PyModule_AddObjectRef(module, "_bivariate_normal_cdf", _bivariate_normal_cdf);
 
     PyObject *_cauchy_isf =
         xsf::numpy::ufunc({static_cast<xsf::numpy::fff_f>(cauchy_isf_float),
@@ -1019,6 +1022,52 @@ _special_ufuncs_module_exec(PyObject *module)
                           "ellipkm1", ellipkm1_doc);
     PyModule_AddObjectRef(module, "ellipkm1", ellipkm1);
 
+    PyObject *elliprc = xsf::numpy::ufunc(
+        {static_cast<xsf::numpy::ff_f>(xsf::cpu::elliprc), static_cast<xsf::numpy::dd_d>(xsf::cpu::elliprc),
+         static_cast<xsf::numpy::FF_F>(xsf::cpu::elliprc), static_cast<xsf::numpy::DD_D>(xsf::cpu::elliprc)},
+        "elliprc", elliprc_doc);
+    PyModule_AddObjectRef(module, "elliprc", elliprc);
+
+    PyObject *elliprd = xsf::numpy::ufunc(
+        {static_cast<xsf::numpy::fff_f>(xsf::cpu::elliprd), static_cast<xsf::numpy::ddd_d>(xsf::cpu::elliprd),
+         [](std::complex<float> x, std::complex<float> y, std::complex<float> z) {
+             return xsf::cpu::elliprd(x, y, z);
+         }, [](std::complex<double> x, std::complex<double> y, std::complex<double> z) {
+             return xsf::cpu::elliprd(x, y, z);
+         }},
+        "elliprd", elliprd_doc);
+    PyModule_AddObjectRef(module, "elliprd", elliprd);
+
+    PyObject *elliprf = xsf::numpy::ufunc(
+        {static_cast<xsf::numpy::fff_f>(xsf::cpu::elliprf), static_cast<xsf::numpy::ddd_d>(xsf::cpu::elliprf),
+         [](std::complex<float> x, std::complex<float> y, std::complex<float> z) {
+             return xsf::cpu::elliprf(x, y, z);
+         }, [](std::complex<double> x, std::complex<double> y, std::complex<double> z) {
+             return xsf::cpu::elliprf(x, y, z);
+         }},
+        "elliprf", elliprf_doc);
+    PyModule_AddObjectRef(module, "elliprf", elliprf);
+
+    PyObject *elliprg = xsf::numpy::ufunc(
+        {static_cast<xsf::numpy::fff_f>(xsf::cpu::elliprg), static_cast<xsf::numpy::ddd_d>(xsf::cpu::elliprg),
+         [](std::complex<float> x, std::complex<float> y, std::complex<float> z) {
+             return xsf::cpu::elliprg(x, y, z);
+         }, [](std::complex<double> x, std::complex<double> y, std::complex<double> z) {
+             return xsf::cpu::elliprg(x, y, z);
+         }},
+        "elliprg", elliprg_doc);
+    PyModule_AddObjectRef(module, "elliprg", elliprg);
+
+    PyObject *elliprj = xsf::numpy::ufunc(
+        {static_cast<xsf::numpy::ffff_f>(xsf::cpu::elliprj), static_cast<xsf::numpy::dddd_d>(xsf::cpu::elliprj),
+         [](std::complex<float> x, std::complex<float> y, std::complex<float> z, std::complex<float> p) {
+             return xsf::cpu::elliprj(x, y, z, p);
+         }, [](std::complex<double> x, std::complex<double> y, std::complex<double> z, std::complex<double> p) {
+             return xsf::cpu::elliprj(x, y, z, p);
+         }},
+        "elliprj", elliprj_doc);
+    PyModule_AddObjectRef(module, "elliprj", elliprj);
+
     PyObject *erfcinv = xsf::numpy::ufunc(
         {static_cast<xsf::numpy::f_f>(xsf::cephes::erfcinv),
          static_cast<xsf::numpy::d_d>(xsf::cephes::erfcinv)},
@@ -1296,6 +1345,12 @@ _special_ufuncs_module_exec(PyObject *module)
                           "hyp0f1", hyp0f1_doc);
     PyModule_AddObjectRef(module, "hyp0f1", hyp0f1);
 
+    PyObject *hyp1f1 = xsf::numpy::ufunc(
+        {static_cast<xsf::numpy::fff_f>(hyp1f1_float), static_cast<xsf::numpy::ddd_d>(hyp1f1_double),
+         static_cast<xsf::numpy::ffF_F>(xsf::hyp1f1), static_cast<xsf::numpy::ddD_D>(xsf::hyp1f1)},
+        "hyp1f1", hyp1f1_doc);
+    PyModule_AddObjectRef(module, "hyp1f1", hyp1f1);
+
     PyObject *hyp2f1 =
         xsf::numpy::ufunc({static_cast<xsf::numpy::ffff_f>(xsf::hyp2f1), static_cast<xsf::numpy::dddd_d>(xsf::hyp2f1),
                            static_cast<xsf::numpy::fffF_F>(xsf::hyp2f1), static_cast<xsf::numpy::dddD_D>(xsf::hyp2f1)},
@@ -1412,6 +1467,11 @@ _special_ufuncs_module_exec(PyObject *module)
         {static_cast<xsf::numpy::ff_f>(xsf::iv_ratio_c), static_cast<xsf::numpy::dd_d>(xsf::iv_ratio_c)}, "_iv_ratio_c",
         iv_ratio_c_doc);
     PyModule_AddObjectRef(module, "_iv_ratio_c", iv_ratio_c);
+
+    PyObject *iv_ratioinv = xsf::numpy::ufunc(
+        {static_cast<xsf::numpy::ff_f>(xsf::iv_ratioinv), static_cast<xsf::numpy::dd_d>(xsf::iv_ratioinv)},
+        "_iv_ratioinv", iv_ratioinv_doc);
+    PyModule_AddObjectRef(module, "_iv_ratioinv", iv_ratioinv);
 
     PyObject *ive = xsf::numpy::ufunc(
         {static_cast<xsf::numpy::ff_f>(xsf::cyl_bessel_ie), static_cast<xsf::numpy::dd_d>(xsf::cyl_bessel_ie),
@@ -1945,6 +2005,12 @@ _special_ufuncs_module_exec(PyObject *module)
                            static_cast<xsf::numpy::dd_d>(t_cdf_double)},
                           "stdtr", stdtr_doc);
     PyModule_AddObjectRef(module, "stdtr", stdtr);
+
+    PyObject *stdtridf =
+        xsf::numpy::ufunc({static_cast<xsf::numpy::ff_f>(stdtridf_float),
+                           static_cast<xsf::numpy::dd_d>(stdtridf_double)},
+                          "stdtridf", stdtridf_doc);
+    PyModule_AddObjectRef(module, "stdtridf", stdtridf);
 
     PyObject *stdtrit =
         xsf::numpy::ufunc({static_cast<xsf::numpy::ff_f>(t_ppf_float),

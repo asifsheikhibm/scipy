@@ -45,18 +45,21 @@ from scipy._external.array_api_extra.testing import lazy_xp_function
 from scipy._lib._array_api_override import (
     array_namespace, SCIPY_ARRAY_API, SCIPY_DEVICE
 )
+
 from scipy._lib._docscrape import FunctionDoc
-from scipy._external import array_api_extra as xpx
+import scipy._external.array_api_extra as xpx
+import scipy._external.array_api_extra.testing as xpt
 
 
 __all__ = [
     '_asarray', 'array_namespace', 'assert_almost_equal', 'assert_array_almost_equal',
     'default_xp', 'eager_warns', 'is_lazy_array', 'is_marray', 'is_pydata_sparse_array',
-    'is_array_api_strict', 'is_complex', 'is_cupy', 'is_jax', 'is_numpy', 'is_torch',
+    'is_array_api_strict', 'is_complex',
+    'is_cupy', 'is_dask', 'is_jax', 'is_numpy', 'is_torch',
     'np_compat', 'get_native_namespace_name',
     'SCIPY_ARRAY_API', 'SCIPY_DEVICE', 'scipy_namespace_for',
     'xp_assert_close', 'xp_assert_equal', 'xp_assert_less',
-    'xp_compat_namespace', 'xp_copy', 'xp_device',
+    'xp_compat_namespace', 'xp_copy', 'xp_copy_to_numpy', 'xp_device',
     'xp_ravel', 'xp_size',
     'xp_unsupported_param_msg', 'xp_vector_norm', 'xp_capabilities',
     'xp_result_type', 'xp_result_device', 'xp_promote',
@@ -155,13 +158,13 @@ def xp_copy(x: Array, *, xp: ModuleType | None = None) -> Array:
     return _asarray(x, copy=True, xp=xp)
 
 
-def _xp_copy_to_numpy(x: Array) -> np.ndarray:
+def xp_copy_to_numpy(x: Array) -> np.ndarray:
     """Copies a possibly on device array to a NumPy array.
 
     This function is intended only for converting alternative backend
     arrays to numpy arrays within test code, to make it easier for use
     of the alternative backend to be isolated only to the function being
-    tested. `_xp_copy_to_numpy` should NEVER be used except in test code
+    tested. `xp_copy_to_numpy` should NEVER be used except in test code
     for the specific purpose mentioned above. In production code, attempts
     to copy device arrays to NumPy arrays should fail, or else functions
     may appear to be working on the GPU when they actually aren't.
@@ -188,6 +191,8 @@ def _xp_copy_to_numpy(x: Array) -> np.ndarray:
         return np.asarray(
             xp.asarray(x, device=xp.Device("CPU_DEVICE")), copy=True
         )
+    if is_mparray(xp):
+        return np.asarray(x._data, dtype=x.dtype)
     # Fall back to np.asarray. This works for dask.array. It
     # currently works for jax.numpy, but hopefully JAX will make
     # the transfer guard workable enough for use in scipy tests, in
@@ -204,7 +209,8 @@ def default_xp(xp: ModuleType) -> Generator[None, None, None]:
     """In all ``xp_assert_*`` and ``assert_*`` function calls executed within this
     context manager, test by default that the array namespace is
     the provided across all arrays, unless one explicitly passes the ``xp=``
-    parameter or ``check_namespace=False``.
+    the provided across all arrays, unless one explicitly passes the ``xp=``
+    parameter.
 
     Without this context manager, the default value for `xp` is the namespace
     for the desired array (the second parameter of the tests).
@@ -228,9 +234,7 @@ def eager_warns(warning_type, *, match=None, xp):
     return ignore_warns(warning_type, match='' if match is None else match)
 
 
-def _strict_check(actual, desired, xp, *,
-                  check_namespace=True, check_dtype=True, check_shape=True,
-                  check_0d=True):
+def _xp_or_default(xp, desired):
     __tracebackhide__ = True  # Hide traceback for py.test
 
     if xp is None:
@@ -238,163 +242,98 @@ def _strict_check(actual, desired, xp, *,
             xp = _default_xp_ctxvar.get()
         except LookupError:
             xp = array_namespace(desired)
-
-    if check_namespace:
-        _assert_matching_namespace(actual, xp)
-
-    # only NumPy distinguishes between scalars and arrays; we do if check_0d=True.
-    # do this first so we can then cast to array (and thus use the array API) below.
-    if is_numpy(xp) and check_0d:
-        _msg = ("Array-ness does not match:\n Actual: "
-                f"{type(actual)}\n Desired: {type(desired)}")
-        assert ((xp.isscalar(actual) and xp.isscalar(desired))
-                or (not xp.isscalar(actual) and not xp.isscalar(desired))), _msg
-
-    actual = xp.asarray(actual)
-    desired = xp.asarray(desired)
-
-    if check_dtype:
-        _msg = f"dtypes do not match.\nActual: {actual.dtype}\nDesired: {desired.dtype}"
-        assert actual.dtype == desired.dtype, _msg
-
-    if check_shape:
-        if is_dask(xp):
-            actual.compute_chunk_sizes()
-            desired.compute_chunk_sizes()
-        _msg = f"Shapes do not match.\nActual: {actual.shape}\nDesired: {desired.shape}"
-        assert actual.shape == desired.shape, _msg
-
-    desired = xp.broadcast_to(desired, actual.shape)
-    return actual, desired, xp
+    return xp
 
 
-def _assert_matching_namespace(actual, xp):
+def _convert_scalar_to_array(x, xp):
     __tracebackhide__ = True  # Hide traceback for py.test
 
-    actual_arr_space = array_namespace(actual)
-    # since the `default_xp` context manager is used for the entire
-    # test suite, `xp` can serve as the source of truth for the
-    # desired namespace. The `desired` array is coerced to that
-    # namespace in any case in `_strict_check`.
-    _msg = ("Input does not have the desired array namespace.\n"
-            f"Actual: {actual_arr_space.__name__}\n"
-            f"Desired: {xp.__name__}")
-    assert actual_arr_space == xp, _msg
+    if isinstance(x, (list, tuple)) or type(x) in (
+        int,
+        float,
+        complex,
+        bool,
+    ):
+        return xp.asarray(x)
+    return x
 
 
-def xp_assert_equal(actual, desired, *, check_namespace=True, check_dtype=True,
+def xp_assert_equal(actual, desired, *, check_dtype=True,
                     check_shape=True, check_0d=True, err_msg='', xp=None):
     __tracebackhide__ = True  # Hide traceback for py.test
 
-    actual, desired, xp = _strict_check(
-        actual, desired, xp, check_namespace=check_namespace,
-        check_dtype=check_dtype, check_shape=check_shape,
-        check_0d=check_0d
-    )
+    xp = _xp_or_default(xp, desired)
+    actual = _convert_scalar_to_array(actual, xp)
+    desired = _convert_scalar_to_array(desired, xp)
 
-    if is_cupy(xp):
-        return xp.testing.assert_array_equal(actual, desired, err_msg=err_msg)
-    elif is_torch(xp):
-        # PyTorch recommends using `rtol=0, atol=0` like this
-        # to test for exact equality
-        err_msg = None if err_msg == '' else err_msg
-        return xp.testing.assert_close(actual, desired, rtol=0, atol=0, equal_nan=True,
-                                       check_dtype=False, msg=err_msg)
-    # JAX uses `np.testing`
-    return np.testing.assert_array_equal(actual, desired, err_msg=err_msg)
+    return xpt.assert_equal(actual, desired, err_msg=err_msg, check_dtype=check_dtype,
+                            check_shape=check_shape, check_scalar=check_0d, xp=xp)
 
 
-def xp_assert_close(actual, desired, *, rtol=None, atol=0, check_namespace=True,
-                    check_dtype=True, check_shape=True, check_0d=True,
-                    err_msg='', xp=None):
+def xp_assert_close(actual, desired, *, rtol=None, atol=0, check_dtype=True,
+                    check_shape=True, check_0d=True, err_msg='', xp=None):
     __tracebackhide__ = True  # Hide traceback for py.test
 
-    actual, desired, xp = _strict_check(
-        actual, desired, xp,
-        check_namespace=check_namespace, check_dtype=check_dtype,
-        check_shape=check_shape, check_0d=check_0d
-    )
+    xp = _xp_or_default(xp, desired)
+    actual = _convert_scalar_to_array(actual, xp)
+    desired = _convert_scalar_to_array(desired, xp)
 
-    floating = xp.isdtype(actual.dtype, ('real floating', 'complex floating'))
-    if rtol is None and floating:
-        # multiplier of 4 is used as for `np.float64` this puts the default `rtol`
-        # roughly half way between sqrt(eps) and the default for
-        # `numpy.testing.assert_allclose`, 1e-7
-        rtol = xp.finfo(actual.dtype).eps**0.5 * 4
-    elif rtol is None:
-        rtol = 1e-7
-
-    if is_cupy(xp):
-        return xp.testing.assert_allclose(actual, desired, rtol=rtol,
-                                          atol=atol, err_msg=err_msg)
-    elif is_torch(xp):
-        err_msg = None if err_msg == '' else err_msg
-        return xp.testing.assert_close(actual, desired, rtol=rtol, atol=atol,
-                                       equal_nan=True, check_dtype=False, msg=err_msg)
-    # JAX uses `np.testing`
-    return np.testing.assert_allclose(actual, desired, rtol=rtol,
-                                      atol=atol, err_msg=err_msg)
+    return xpt.assert_close(actual, desired,rtol=rtol, atol=atol,
+                            err_msg=err_msg, check_dtype=check_dtype,
+                            check_shape=check_shape, check_scalar=check_0d, xp=xp)
 
 
-def xp_assert_close_nulp(actual, desired, *, nulp=1, check_namespace=True,
+def xp_assert_close_nulp(actual, desired, *, nulp=1,
                          check_dtype=True, check_shape=True, check_0d=True,
-                         err_msg='', xp=None):
+                         xp=None):
     __tracebackhide__ = True  # Hide traceback for py.test
 
-    actual, desired, xp = _strict_check(
-        actual, desired, xp,
-        check_namespace=check_namespace, check_dtype=check_dtype,
-        check_shape=check_shape, check_0d=check_0d
-    )
 
-    actual, desired = map(_xp_copy_to_numpy, (actual, desired))
-    return np.testing.assert_array_almost_equal_nulp(actual, desired, nulp=nulp)
+    xp = _xp_or_default(xp, desired)
+    actual = _convert_scalar_to_array(actual, xp)
+    desired = _convert_scalar_to_array(desired, xp)
 
+    return xpt.assert_close_nulp(actual, desired, nulp=nulp,
+                            check_dtype=check_dtype,
+                            check_shape=check_shape, check_scalar=check_0d, xp=xp)
 
-def _assert_less(actual, desired, *, err_msg, verbose, xp):
-    if is_cupy(xp):
-        return xp.testing.assert_array_less(actual, desired,
-                                            err_msg=err_msg, verbose=verbose)
-    elif is_torch(xp):
-        if actual.device.type != 'cpu':
-            actual = actual.cpu()
-        if desired.device.type != 'cpu':
-            desired = desired.cpu()
-    # JAX uses `np.testing`
-    return np.testing.assert_array_less(actual, desired,
-                                        err_msg=err_msg, verbose=verbose)
-
-
-def xp_assert_less(actual, desired, *, check_namespace=True, check_dtype=True,
-                   check_shape=True, check_0d=True, err_msg='', verbose=True, xp=None):
+def _assert_less(
+    actual, desired, *, check_dtype, check_shape, check_0d,
+    err_msg, verbose, xp
+):
     __tracebackhide__ = True  # Hide traceback for py.test
 
-    actual, desired, xp = _strict_check(
-        actual, desired, xp, check_namespace=check_namespace,
-        check_dtype=check_dtype, check_shape=check_shape,
-        check_0d=check_0d
-    )
+    actual = _convert_scalar_to_array(actual, xp)
+    desired = _convert_scalar_to_array(desired, xp)
+    xpt.assert_less(actual, desired, check_dtype=check_dtype,
+                    check_shape=check_shape, check_scalar=check_0d, err_msg=err_msg,
+                    verbose=verbose, xp=xp)
 
-    _assert_less(actual, desired, err_msg=err_msg, verbose=verbose, xp=xp)
+
+def xp_assert_less(actual, desired, *, check_dtype=True,
+                   check_shape=True, check_0d=True,
+                   err_msg='', verbose=True, xp=None):
+    __tracebackhide__ = True  # Hide traceback for py.test
+
+    xp = _xp_or_default(xp, desired)
+    _assert_less(
+        actual, desired,
+        check_dtype=check_dtype, check_shape=check_shape, check_0d=check_0d,
+        err_msg=err_msg, verbose=verbose, xp=xp,
+    )
 
 
 def xp_assert_less_equal(
-    actual, desired, *, check_namespace=True, check_dtype=True,
+    actual, desired, *, check_dtype=True,
     check_shape=True, check_0d=True, err_msg='', verbose=True, xp=None
 ):
     __tracebackhide__ = True  # Hide traceback for py.test
 
-    actual, desired, xp = _strict_check(
-        actual, desired, xp, check_namespace=check_namespace,
-        check_dtype=check_dtype, check_shape=check_shape,
-        check_0d=check_0d
-    )
-
-    # we call `_strict_check` before `_assert_less` so that scalars are
-    # coerced to the `xp` namespace before we apply `xp.nextafter`
+    xp = _xp_or_default(xp, desired)
     _assert_less(
         actual, xp.nextafter(desired, desired + 1),
-        err_msg=err_msg, verbose=verbose, xp=xp
+        check_dtype=check_dtype, check_shape=check_shape, check_0d=check_0d,
+        err_msg=err_msg, verbose=verbose, xp=xp,
     )
 
 
@@ -447,6 +386,9 @@ def scipy_namespace_for(xp: ModuleType) -> ModuleType | None:
         return jax.scipy
 
     if is_torch(xp):
+        return xp
+
+    if is_mparray(xp):
         return xp
 
     return None
@@ -528,6 +470,10 @@ def xp_result_type(*args, force_floating=False, xp):
 
     try:  # follow library's preferred promotion rules
         return xp.result_type(*args_not_none)
+    except ValueError:  # all scalars; need at least one array/dtype
+        if not force_floating:
+            raise
+        return xp.result_type(*(args_not_none + [xp.asarray(1.0)])) # skip device check
     except TypeError:  # mixed type promotion isn't defined
         if not force_floating:
             raise
@@ -804,6 +750,8 @@ def _make_sphinx_capabilities(
     warnings = (),
     # Whether the function supports MArrays that wrap one of the supported backends
     marray=None,
+    # Whether the function support mparrays
+    mparray=None,
     # unused in documentation
     reason=None,
     method_capabilities=None,
@@ -828,6 +776,11 @@ def _make_sphinx_capabilities(
 
     # documentation doesn't display the reason
     for module, _ in list(skip_backends) + list(xfail_backends):
+        # Don't display mparray in tables for now. If desired in the future, add
+        # to `capabilities` table above, _make_capabilities_note below, and
+        # _process_capabilities_table_entry in _array_api_docs_tables.py
+        if module == "mparray":
+             continue
         backend = capabilities[module]
         if backend.cpu is not None:
             backend.cpu = False
@@ -848,9 +801,10 @@ def _make_sphinx_capabilities(
         backend.warnings.append(warning)
 
     # MArrays are either supported or not. If supported, they work with all combinations
-    # of device + backend that are supported by the function and MArray itself. This is
-    # indicated with an extra note after the backend table.
-    capabilities.update({'marray': marray})
+    # of device + backend that are supported by the function and MArray itself.
+    # Support for MArray and MPArray are indicated with an extra note after the backend
+    # table.
+    capabilities.update({'marray': marray, 'mparray': mparray})
 
     return capabilities
 
@@ -875,16 +829,19 @@ def _make_capabilities_note(fun_name, capabilities, extra_note=None):
         "backed by the backends indicated above; masked values will be treated as "
         "though they were not present." if capabilities.get("marray", False) else "")
 
+    mparray_note = (f"In addition, `{fun_name}` accepts "
+        "`MPArrays <https://github.com/mdhaber/mparray>`__; "
+        "calculations will be performed with the precision set by ``mpmath.mp.dps``. "
+        if capabilities.get("mparray", False) else "")
+
     # Note: deliberately not documenting array-api-strict
     note = f"""
 
     .. dropdown:: Array API Standard Support
         :color: primary
 
-        `{fun_name}` has experimental support for Python Array API Standard compatible
-        backends in addition to NumPy. Please consider testing these features
-        by setting an environment variable ``SCIPY_ARRAY_API=1`` and providing
-        CuPy, PyTorch, JAX, or Dask arrays as array arguments. The following
+        `{fun_name}` has support for Python Array API Standard compatible
+        backends in addition to NumPy. The following
         combinations of backend and device (or other capability) are supported.
 
         ====================  ====================  ====================
@@ -898,6 +855,7 @@ def _make_capabilities_note(fun_name, capabilities, extra_note=None):
         ====================  ====================  ====================
 
     {textwrap.indent(marray_note or "", ' '*4)}
+    {textwrap.indent(mparray_note or "", ' '*4)}
     {textwrap.indent(extra_note or "",  ' '*4)}
 
         See :ref:`dev-arrayapi` for more information.
@@ -915,7 +873,7 @@ def xp_capabilities(
     # Generate pytest.mark.skip/xfail_xp_backends.
     # See documentation in conftest.py.
     # lists of tuples [(module name, reason), ...]
-    skip_backends=(), xfail_backends=(),
+    skip_backends=None, xfail_backends=None,
     cpu_only=False, np_only=False, reason=None,
     out_of_scope=False, exceptions=(),
     # lists of tuples [(module name, reason), ...]
@@ -931,6 +889,8 @@ def xp_capabilities(
     method_capabilities=None,
     # Whether the function supports MArrays that wrap one of the supported backends
     marray=False,
+    # Whether the function supports arbitrary precision via mparray.
+    mparray=False
 ):
     """Decorator for a function that states its support among various
     Array API compatible backends.
@@ -949,6 +909,9 @@ def xp_capabilities(
     make_xp_pytest_param
     array_api_extra.testing.lazy_xp_function
     """
+    skip_backends = [] if skip_backends is None else skip_backends
+    xfail_backends = [] if xfail_backends is None else xfail_backends
+
     capabilities_table = (xp_capabilities_table if capabilities_table is None
                           else capabilities_table)
 
@@ -961,8 +924,8 @@ def xp_capabilities(
         # Fill in missing entries of method capabilities with
         # defaults if any entries are missing.
         method_capabilities[method] = dict(
-            skip_backends=(),
-            xfail_backends=(),
+            skip_backends=[],
+            xfail_backends=[],
             cpu_only=False,
             np_only=False,
             out_of_scope=False,
@@ -972,8 +935,14 @@ def xp_capabilities(
             allow_dask_compute=False,
             jax_jit=True,
             marray=False,
+            mparray=False,
         ) | capabilities
+        if not method_capabilities[method]["mparray"]:
+            method_capabilities[method]["skip_backends"] += (
+                [("mparray", "mparray not supported for this method")])
 
+    if not mparray:
+        skip_backends += [("mparray", "mparray not supported for this function")]
     capabilities = dict(
         skip_backends=skip_backends,
         xfail_backends=xfail_backends,
@@ -987,6 +956,7 @@ def xp_capabilities(
         warnings=warnings,
         method_capabilities=method_capabilities,
         marray=marray,
+        mparray=mparray,
     )
     sphinx_capabilities = _make_sphinx_capabilities(**capabilities)
 
@@ -1254,3 +1224,7 @@ def xp_device_type(a: Array) -> Literal["cpu", "cuda", None]:
 
 def xp_isscalar(x):
     return np.isscalar(x) or (is_array_api_obj(x) and x.ndim == 0)
+
+
+def is_mparray(xp):
+    return "mparray" in str(xp)

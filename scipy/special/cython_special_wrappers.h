@@ -141,6 +141,17 @@ npy_cdouble special_crgamma(npy_cdouble z);
 
 double special_ellipk(double m);
 
+double xsf_elliprc(double x, double y);
+npy_cdouble xsf_celliprc(npy_cdouble x, npy_cdouble y);
+double xsf_elliprd(double x, double y, double z);
+npy_cdouble xsf_celliprd(npy_cdouble x, npy_cdouble y, npy_cdouble z);
+double xsf_elliprf(double x, double y, double z);
+npy_cdouble xsf_celliprf(npy_cdouble x, npy_cdouble y, npy_cdouble z);
+double xsf_elliprg(double x, double y, double z);
+npy_cdouble xsf_celliprg(npy_cdouble x, npy_cdouble y, npy_cdouble z);
+double xsf_elliprj(double x, double y, double z, double p);
+npy_cdouble xsf_celliprj(npy_cdouble x, npy_cdouble y, npy_cdouble z, npy_cdouble p);
+
 double cephes_expn_wrap(Py_ssize_t n, double x);
 double xsf_iv(double v, double x);
 double cephes_jv_wrap(double v, double x);
@@ -431,6 +442,7 @@ float boost_fdtrc_float(float dfn, float dfd, float x);
 double boost_fdtrc_double(double dfn, double dfd, double x);
 float boost_fdtri_float(float dfn, float dfd, float p);
 double boost_fdtri_double(double dfn, double dfd, double p);
+double boost_hyp1f1_double(double a, double b, double x);
 float boost_log_gammainc_float(float a, float x);
 double boost_log_gammainc_double(double a, double x);
 float boost_log_gammaincc_float(float a, float x);
@@ -454,6 +466,7 @@ float boost_powm1_float(float x, float y);
 double boost_powm1_double(double x, double y);
 float boost_stdtr_float(float df, float t);
 double boost_stdtr_double(double df, double t);
+double boost_stdtridf_double(double p, double t);
 float boost_stdtrit_float(float df, float p);
 double boost_stdtrit_double(double df, double p);
 

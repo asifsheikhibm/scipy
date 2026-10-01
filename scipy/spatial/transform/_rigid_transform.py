@@ -13,7 +13,7 @@ from scipy._lib._array_api import (
     Array,
     xp_capabilities,
 )
-from scipy.spatial.transform import Rotation
+from scipy.spatial.transform._rotation import Rotation
 from scipy.spatial.transform._rotation import _promote
 import scipy.spatial.transform._rigid_transform_cy as cython_backend
 import scipy.spatial.transform._rigid_transform_xp as xp_backend
@@ -1744,12 +1744,12 @@ class RigidTransform:
         If the original frame transforms to the final frame by this transform,
         then its application to a vector can be seen in two ways:
 
-            - As a projection of vector components expressed in the final frame
-              to the original frame.
-            - As the physical transformation of a vector being glued to the
-              original frame as it transforms. In this case the vector
-              components are expressed in the original frame before and after
-              the transformation.
+        - As a projection of vector components expressed in the final frame
+          to the original frame.
+        - As the physical transformation of a vector being glued to the
+          original frame as it transforms. In this case the vector
+          components are expressed in the original frame before and after
+          the transformation.
 
         In terms of the rotation matrix and translation,
         this application is the same as

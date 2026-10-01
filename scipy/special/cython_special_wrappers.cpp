@@ -12,6 +12,7 @@
 #include <xsf/boxcox.h>
 #include <xsf/cdflib.h>
 #include <xsf/convex_analysis.h>
+#include <xsf/cpu/ellint_carlson.h>
 #include <xsf/cpu/stats.h>
 #include <xsf/digamma.h>
 #include <xsf/digammainv.h>
@@ -361,6 +362,36 @@ double xsf_wrightomega(double z) { return xsf::wrightomega(z); }
 npy_cdouble xsf_cwrightomega(npy_cdouble z) { return to_ccomplex(xsf::wrightomega(to_complex(z))); }
 
 double special_ellipk(double m) { return xsf::ellipk(m); }
+
+double xsf_elliprc(double x, double y) { return xsf::cpu::elliprc(x, y); }
+
+npy_cdouble xsf_celliprc(npy_cdouble x, npy_cdouble y) {
+    return to_ccomplex(xsf::cpu::elliprc(to_complex(x), to_complex(y)));
+}
+
+double xsf_elliprd(double x, double y, double z) { return xsf::cpu::elliprd(x, y, z); }
+
+npy_cdouble xsf_celliprd(npy_cdouble x, npy_cdouble y, npy_cdouble z) {
+    return to_ccomplex(xsf::cpu::elliprd(to_complex(x), to_complex(y), to_complex(z)));
+}
+
+double xsf_elliprf(double x, double y, double z) { return xsf::cpu::elliprf(x, y, z); }
+
+npy_cdouble xsf_celliprf(npy_cdouble x, npy_cdouble y, npy_cdouble z) {
+    return to_ccomplex(xsf::cpu::elliprf(to_complex(x), to_complex(y), to_complex(z)));
+}
+
+double xsf_elliprg(double x, double y, double z) { return xsf::cpu::elliprg(x, y, z); }
+
+npy_cdouble xsf_celliprg(npy_cdouble x, npy_cdouble y, npy_cdouble z) {
+    return to_ccomplex(xsf::cpu::elliprg(to_complex(x), to_complex(y), to_complex(z)));
+}
+
+double xsf_elliprj(double x, double y, double z, double p) { return xsf::cpu::elliprj(x, y, z, p); }
+
+npy_cdouble xsf_celliprj(npy_cdouble x, npy_cdouble y, npy_cdouble z, npy_cdouble p) {
+    return to_ccomplex(xsf::cpu::elliprj(to_complex(x), to_complex(y), to_complex(z), to_complex(p)));
+}
 
 double xsf_beta(double a, double b) { return xsf::beta(a, b); }
 
@@ -801,6 +832,8 @@ float boost_fdtri_float(float dfn, float dfd, float p) { return f_ppf_float(dfn,
 
 double boost_fdtri_double(double dfn, double dfd, double p) { return f_ppf_double(dfn, dfd, p); }
 
+double boost_hyp1f1_double(double a, double b, double x) { return hyp1f1_double(a, b, x); }
+
 float boost_log_gammainc_float(float a, float x) { return lgamma_p_float(a, x); }
 
 double boost_log_gammainc_double(double a, double x) { return lgamma_p_double(a, x); }
@@ -862,8 +895,9 @@ float boost_stdtr_float(float df, float t) { return t_cdf_float(df, t); }
 
 double boost_stdtr_double(double df, double t) { return t_cdf_double(df, t); }
 
+double boost_stdtridf_double(double p, double t) { return stdtridf_double(p, t); }
+
 float boost_stdtrit_float(float df, float p) { return t_ppf_float(df, p); }
 
 double boost_stdtrit_double(double df, double p) { return t_ppf_double(df, p); }
-
 
