@@ -765,7 +765,7 @@ jobs:
       
       - name: Setup build and install scipy
         run: |
-          spin build --release -- -j4
+          spin build --release -j4
       
       - name: Ccache performance
         shell: bash -l {0}
