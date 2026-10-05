@@ -738,10 +738,10 @@ jobs:
     needs: get_commit_message
     if: >
       needs.get_commit_message.outputs.message == 1
-      && (github.repository == 'scipy/scipy' || github.repository == '')
-    runs-on: ubuntu-24.04-ppc64le
+      && (github.repository == 'scipy/scipy' || github.repository == '' || github.repository == 'asifsheikhibm/scipy')
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
           persist-credentials: false
@@ -764,7 +764,7 @@ jobs:
       
       - name: Setup build and install scipy
         run: |
-          spin build --release
+          spin build --release -- -j4
       
       - name: Ccache performance
         shell: bash -l {0}
