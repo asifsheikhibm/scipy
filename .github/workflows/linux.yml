@@ -780,5 +780,5 @@ jobs:
       - name: Test SciPy
         run: |
           export OMP_NUM_THREADS=2
-          python -m pip uninstall --yes uarray # avoid deprecation warnings
+          python -m pip uninstall --yes uarray
           spin test -j3 -- --durations 10 --timeout=60
