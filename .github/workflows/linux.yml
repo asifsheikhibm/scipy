@@ -737,7 +737,7 @@ jobs:
       - name: Test SciPy
         run: |
           pixi run test-fail-slow
-  
+  # trying numpy 2.4.6
   test_ppc64le:
     name: ppc64le, fast, py3.12, spin
     needs: get_commit_message
